@@ -2,5 +2,9 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>DebugWindow.qml</file>
+        <file>SectionSwitch.qml</file>
+        <file>SectionSelect.qml</file>
+        <file>BlockStatus.qml</file>
+        <file>Sensor.qml</file>
     </qresource>
 </RCC>

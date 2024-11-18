@@ -11,7 +11,7 @@ ApplicationWindow {
     maximumWidth: 1024
     maximumHeight: 768
     visible: true
-    title: "Система управления кондиционированием"
+    title: "Управление кондиционированием"
     Universal.theme: internal.isDarkTheme ? Universal.Dark : Universal.Light
 
     Component.onCompleted: {
@@ -54,6 +54,10 @@ ApplicationWindow {
         function onPressureChanged(p) {
             internal.p = p
         }
+
+        function onBlockStatusChanged(b, s) {
+            internal.blockStatus.setProperty(b, "status", s);
+        }
     }
 
     QtObject {
@@ -67,7 +71,12 @@ ApplicationWindow {
         property int           airFlowDirection: 0
         property bool          isDarkTheme: false
         property bool          powerStatus: false
-        property var           blockStatus: [1, 1, 0]
+        property var           blockStatus: ListModel {
+            ListElement { status: 0 }
+            ListElement { status: 0 }
+            ListElement { status: 0 }
+        }
+
         readonly property var  tUnits: ["°C", "°F", "K"]
         readonly property var  pUnits: ["мм.рт.ст.", "Па"]
         readonly property var  airFlowDirections: ["Выдув", "Вдув"]
@@ -111,85 +120,43 @@ ApplicationWindow {
                 width: parent.width
                 spacing: 8
 
-                RowLayout {
-                    width: parent.width
-
-                    Label {
-                        text: "Питание"
-                        font.pixelSize: 16
-                    }
-                    Item { Layout.fillWidth: true }
-                    Switch {
-                        property bool initialized: false
-                        id: powerSwitch
-                        checked: internal.powerStatus
-                        Component.onCompleted: initialized = true
-                        onCheckedChanged:
-                            if (initialized)
-                                system.power(checked)
+                SectionSwitch {
+                    id: power
+                    text: "Питание"
+                    switchChecked: internal.powerStatus
+                    onCheckedChanged: function(initialized, checked) {
+                        if (initialized) {
+                            system.power(checked)
+                        }
                     }
                 }
 
-                RowLayout {
-                    width: parent.width
-
-                    Label {
-                        text: "Направление подачи воздуха"
-                        font.pixelSize: 16
-                    }
-                    Item { Layout.fillWidth: true }
-                    ComboBox {
-                        property bool initialized: false
-                        model: internal.airFlowDirections
-                        currentIndex: internal.airFlowDirection
-                        Component.onCompleted: initialized = true
-                        onCurrentIndexChanged:
-                            if (initialized)
-                                system.airFlowDirection(currentIndex)
+                SectionSelect {
+                    text: "Направление подачи воздуха"
+                    selectModel: internal.airFlowDirections
+                    selectCurrentIndex: internal.airFlowDirection
+                    onIndexChanged: function(initialized, currentIndex) {
+                        if (initialized) {
+                            system.airFlowDirection(currentIndex)
+                        }
                     }
                 }
 
-                RowLayout {
-                    spacing: 16
-
-                    Label {
-                        text: "Состояние системы"
-                    }
-                    Rectangle {
-                        width: 16
-                        height: 16
-                        color: internal.powerStatus ? internal.blockColors[1] : internal.blockColors[0]
-                        radius: 10
-                    }
+                BlockStatus {
+                    text: "Состояние системы"
+                    model: [internal.powerStatus ? 1 : 0]
+                    colors: internal.blockColors
+                    isSystem: true
                 }
 
-                RowLayout {
-                    spacing: 16
-
-                    Label {
-                        text: "Состояние блоков"
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        height: 8
-                        color: internal.blockColors[internal.blockStatus[0]]
-                        radius: 10
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        height: 8
-                        color: internal.blockColors[internal.blockStatus[1]]
-                        radius: 10
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        height: 8
-                        color: internal.blockColors[internal.blockStatus[2]]
-                        radius: 10
-                    }
+                BlockStatus {
+                    text: "Состояние блоков"
+                    model: [
+                        internal.blockStatus.get(0).status,
+                        internal.blockStatus.get(1).status,
+                        internal.blockStatus.get(2).status
+                    ]
+                    colors: internal.blockColors
                 }
             }
         }
@@ -202,43 +169,35 @@ ApplicationWindow {
                 width: parent.width
                 spacing: 8
 
-                RowLayout {
-                    Label {
-                        text: "Шкала температуры"
-                        font.pixelSize: 16
-                    }
-                    Item { Layout.fillWidth: true }
-                    ComboBox {
-                        model: internal.tUnits
-                        currentIndex: internal.currentTUnits
-                        onCurrentIndexChanged: internal.currentTUnits = currentIndex
+                SectionSelect {
+                    text: "Шкала температуры"
+                    selectModel: internal.tUnits
+                    selectCurrentIndex: internal.currentTUnits
+                    onIndexChanged: function(initialized, currentIndex) {
+                        if (initialized) {
+                            internal.currentTUnits = currentIndex
+                        }
                     }
                 }
 
-                RowLayout {
-                    Label {
-                        text: "Ед. изм. давления"
-                        font.pixelSize: 16
-                    }
-                    Item { Layout.fillWidth: true }
-                    ComboBox {
-                        model: internal.pUnits
-                        currentIndex: internal.currentPUnits
-                        onCurrentIndexChanged: internal.currentPUnits = currentIndex
+                SectionSelect {
+                    text: "Ед. изм. давления"
+                    selectModel: internal.pUnits
+                    selectCurrentIndex: internal.currentPUnits
+                    onIndexChanged: function(initialized, currentIndex) {
+                        if (initialized) {
+                            internal.currentPUnits = currentIndex
+                        }
                     }
                 }
 
-                RowLayout {
-                    width: parent.width
-
-                    Label {
-                        text: "Темная тема"
-                        font.pixelSize: 16
-                    }
-                    Item { Layout.fillWidth: true }
-                    Switch {
-                        checked: internal.isDarkTheme
-                        onCheckedChanged: internal.isDarkTheme = checked
+                SectionSwitch {
+                    text: "Темная тема"
+                    switchChecked: internal.isDarkTheme
+                    onCheckedChanged: function(initialized, checked) {
+                        if (initialized) {
+                            internal.isDarkTheme = checked
+                        }
                     }
                 }
             }
@@ -248,43 +207,27 @@ ApplicationWindow {
             Layout.fillWidth: true
             title: "Мониторинг"
 
-            GridLayout {
+            ColumnLayout {
                 width: parent.width
-                columns: 2
-                columnSpacing: 16
+                spacing: 8
 
-                Label {
-                    text: "Температура"
-                    font.pixelSize: 16
-                }
-                Label {
-                    text: internal.convertTUnits(internal.t,
-                          internal.currentTUnits).toFixed(1) +
-                          internal.tUnits[internal.currentTUnits]
-                    font.bold: true
-                    Layout.alignment: Qt.AlignRight
+                Sensor {
+                    label: "Температура"
+                    value: internal.convertTUnits(internal.t,
+                           internal.currentTUnits).toFixed(1) +
+                           internal.tUnits[internal.currentTUnits]
                 }
 
-                Label {
-                    text: "Влажность"
-                    font.pixelSize: 16
-                }
-                Label {
-                    text: internal.h + "%"
-                    font.bold: true
-                    Layout.alignment: Qt.AlignRight
+                Sensor {
+                    label: "Влажность"
+                    value: internal.h + "%"
                 }
 
-                Label {
-                    text: "Давление"
-                    font.pixelSize: 16
-                }
-                Label {
-                    text: internal.convertPUnits(internal.p,
-                          internal.currentPUnits).toFixed(1) +
-                          internal.pUnits[internal.currentPUnits]
-                    font.bold: true
-                    Layout.alignment: Qt.AlignRight
+                Sensor {
+                    label: "Давление"
+                    value: internal.convertPUnits(internal.p,
+                           internal.currentPUnits).toFixed(1) +
+                           internal.pUnits[internal.currentPUnits]
                 }
             }
         }
@@ -292,7 +235,7 @@ ApplicationWindow {
         Button {
             text: "Отладка"
             Layout.fillWidth: true
-            enabled: powerSwitch.checked
+            enabled: power.switchChecked
 
             onClicked: {
                 let component = Qt.createComponent("DebugWindow.qml")

@@ -6,28 +6,20 @@
 #include "settings.h"
 
 /*!
- * \brief Конструктор класса Settings
- * \param parent Родительский QObject
- * \param settingsPath Путь к файлу настроек
- *
- * Инициализирует объект Settings и устанавливает путь к файлу настроек
+ * \brief Инициализирует объект Settings и сохраняет путь к файлу настроек
  */
-
 Settings::Settings(QObject *parent, QString settingsPath) : QObject(parent)
 {
     this->settingsPath = settingsPath;
 }
 
 /*!
- * \brief Сохраняет настройки в XML-файл
- * \param currentTUnit Текущая единица измерения температуры
- * \param currentPUnit Текущая единица измерения давления
- * \param isDarkTheme Флаг темной темы
+ * \brief Создает XML-документ с настройками и сохраняет его в файл
  *
- * Создает XML-документ с настройками и сохраняет его в файл,
- * указанный в settingsPath
+ * Формирует XML-документ следующей структуры:
+ * <settings currentTUnit="" currentPUnit="" isDarkTheme=""/>
+ * Сохраняет документ в файл с отступом 4 пробела
  */
-
 void Settings::save(int currentTUnit, int currentPUnit, bool isDarkTheme)
 {
     QFile file(this->settingsPath);
@@ -40,46 +32,49 @@ void Settings::save(int currentTUnit, int currentPUnit, bool isDarkTheme)
 
     document.appendChild(settings);
 
-    if (file.open(QIODevice::WriteOnly)) {
-        QTextStream out(&file);
-
-        document.save(out, 4);
-        file.flush();
-        file.close();
-
-        qDebug() << "Settings saved on path " << this->settingsPath;
+    if (!file.open(QIODevice::WriteOnly)) {
+        qWarning() << "Failed save settings";
+        return;
     }
+
+    QTextStream out(&file);
+    document.save(out, 4);
+    file.close();
+
+    qDebug() << "Settings saved on the path " << this->settingsPath;
 }
 
 /*!
- * \brief Загружает настройки из XML-файла
+ * \brief Читает XML-файл настроек и отправляет сигнал loaded()
  *
- * Читает XML-файл настроек и отправляет сигнал loaded()
- * с загруженными значениями. Если файл не существует или
- * не может быть открыт, сигнал не отправляется.
+ * Открывает файл на чтение, парсит XML и извлекает значения атрибутов.
+ * При успешном чтении отправляет сигнал loaded() с прочитанными значениями.
+ * При ошибке открытия файла выводит предупреждение.
  */
-
 void Settings::load()
 {
     QFile file(this->settingsPath);
 
-    if (file.open(QIODevice::ReadOnly)) {
-        QTextStream in(&file);
-        QDomDocument document;
-        QDomElement settings;
-        int currentTUnit, currentPUnit;
-        bool isDarkTheme;
-
-        document.setContent(in.readAll());
-        file.close();
-
-        settings = document.firstChildElement();
-        currentTUnit = settings.attribute("currentTUnit").toInt();
-        currentPUnit = settings.attribute("currentPUnit").toInt();
-        isDarkTheme = settings.attribute("isDarkTheme").toInt();
-
-        emit loaded(currentTUnit, currentPUnit, isDarkTheme);
-
-        qDebug() << "Settings loaded successfully";
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Failed to load settings";
+        return;
     }
+
+    QTextStream in(&file);
+    QDomDocument document;
+    QDomElement settings;
+    int currentTUnit, currentPUnit;
+    bool isDarkTheme;
+
+    document.setContent(in.readAll());
+    file.close();
+
+    settings = document.firstChildElement();
+    currentTUnit = settings.attribute("currentTUnit").toInt();
+    currentPUnit = settings.attribute("currentPUnit").toInt();
+    isDarkTheme = settings.attribute("isDarkTheme").toInt();
+
+    emit loaded(currentTUnit, currentPUnit, isDarkTheme);
+
+    qDebug() << "Settings loaded successfully";
 }
